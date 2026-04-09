@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音樂聽寫測驗｜學生端</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+
+<!-- ★★★ 同樣換成你的 Firebase 設定 ★★★ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ▼▼▼ 換成你的 Firebase 設定（與老師端相同） ▼▼▼
+ const firebaseConfig = {
+  apiKey: "AIzaSyCWWcAaz5oQGthHrwr5YgIcAFsepCPROCw",
+  authDomain: "music-b1097.firebaseapp.com",
+  databaseURL: "https://music-b1097-default-rtdb.firebaseio.com",
+  projectId: "music-b1097",
+  storageBucket: "music-b1097.firebasestorage.app",
+  messagingSenderId: "772363689744",
+  appId: "1:772363689744:web:011618addceee3dfa98f95",
+  measurementId: "G-19SBWT0MGK"
+};
+  // ▲▲▲ 換成你的 Firebase 設定 ▲▲▲
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+  window._db  = db;
+  window._ref = ref;
+  window._set = set;
+  window._get = get;
+  window._onValue = onValue;
+  window._update  = update;
+  window._firebaseReady = true;
+  document.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<style>
+:root{--ink:#1a1108;--cream:#f7f2e6;--gold:#c9942a;--goldl:#e8c46a;--burgundy:#7b1f3e;--navy:#1a3c6e;--purple:#4a1a7e;--ok:#2d6a4f;--bad:#9b2226;--bg:#f4efe3;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);font-family:'Noto Serif TC',serif;color:var(--ink);min-height:100vh;}
+
+/* LOGIN */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#1c1408,#2a1a0a);}
+.lbox{background:var(--cream);border-radius:8px;padding:38px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.5);border:1px solid rgba(201,148,42,.25);}
+.llogo{text-align:center;margin-bottom:26px;}
+.llogo .ic{font-size:46px;}
+.llogo h1{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:var(--burgundy);margin-top:7px;}
+.llogo p{font-size:12px;color:#999;letter-spacing:1px;margin-top:3px;}
+.fg{margin-bottom:13px;}
+.fl{font-size:10px;color:#999;letter-spacing:2px;margin-bottom:4px;display:block;text-transform:uppercase;}
+.fi{width:100%;padding:10px 13px;background:white;border:1.5px solid rgba(26,60,110,.18);border-radius:4px;font-family:'Noto Serif TC',serif;font-size:14px;color:var(--ink);transition:border-color .2s;}
+.fi:focus{outline:none;border-color:var(--navy);}
+.fi.code{font-family:'Source Code Pro',monospace;font-size:28px;letter-spacing:8px;text-align:center;font-weight:600;}
+.lbtn{width:100%;padding:12px;background:linear-gradient(135deg,var(--burgundy),#5a1530);color:#fff;border:none;border-radius:4px;font-family:'Noto Serif TC',serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;margin-top:4px;transition:all .2s;}
+.lbtn:hover{filter:brightness(1.12);transform:translateY(-1px);}
+.lerr{color:var(--bad);font-size:12px;margin-top:7px;text-align:center;min-height:16px;}
+
+/* WAITING */
+#waiting{min-height:100vh;display:none;align-items:center;justify-content:center;background:linear-gradient(160deg,#1c1408,#2a1a0a);flex-direction:column;gap:18px;}
+.wcard{background:rgba(247,242,230,.07);border:1px solid rgba(201,148,42,.22);border-radius:8px;padding:30px 38px;text-align:center;max-width:360px;}
+.wname{font-family:'Playfair Display',serif;font-size:22px;color:var(--goldl);margin-bottom:5px;}
+.wsub{color:rgba(247,242,230,.45);font-size:13px;letter-spacing:1px;}
+.wpulse{width:14px;height:14px;background:#4caf50;border-radius:50%;margin:18px auto;animation:wp 1.2s infinite;}
+@keyframes wp{0%,100%{transform:scale(1);opacity:.8;}50%{transform:scale(1.5);opacity:1;}}
+
+/* QUIZ */
+#quiz{display:none;min-height:100vh;background:var(--bg);}
+.qhdr{background:linear-gradient(135deg,var(--burgundy),#5a1530);padding:11px 18px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.18);}
+.qhdr-name{font-family:'Playfair Display',serif;font-size:14px;color:var(--goldl);font-weight:700;}
+.qhdr-r{margin-left:auto;display:flex;align-items:center;gap:14px;}
+.qtimer{font-family:'Source Code Pro',monospace;font-size:17px;color:var(--goldl);letter-spacing:2px;}
+.qpw{display:flex;align-items:center;gap:7px;}
+.qpbar{width:70px;height:5px;background:rgba(255,255,255,.18);border-radius:3px;overflow:hidden;}
+.qpfill{height:100%;background:var(--goldl);border-radius:3px;transition:width .4s;}
+.qptxt{font-family:'Source Code Pro',monospace;font-size:10px;color:rgba(255,255,255,.5);}
+
+.sdiv{background:linear-gradient(135deg,rgba(26,60,110,.08),rgba(26,60,110,.02));border-left:4px solid var(--navy);padding:9px 18px;font-size:11px;letter-spacing:2px;color:var(--navy);font-weight:700;}
+.sdiv.red{background:linear-gradient(135deg,rgba(123,31,62,.08),rgba(123,31,62,.02));border-left-color:var(--burgundy);color:var(--burgundy);}
+.sdiv.purple{background:linear-gradient(135deg,rgba(74,26,126,.08),rgba(74,26,126,.02));border-left-color:var(--purple);color:var(--purple);}
+
+.qcard{margin:14px;background:#fff;border-radius:7px;box-shadow:0 2px 14px rgba(0,0,0,.07);overflow:hidden;border:1px solid rgba(0,0,0,.05);}
+.qch{padding:10px 16px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(0,0,0,.05);}
+.qch.rhythm{background:rgba(123,31,62,.04);}
+.qch.melody{background:rgba(26,60,110,.04);}
+.qch.chord{background:rgba(74,26,126,.04);}
+.qnum{font-family:'Source Code Pro',monospace;font-size:10px;color:#bbb;letter-spacing:2px;}
+.qlbl{font-size:13px;font-weight:700;}
+.qmeter{margin-left:auto;font-family:'Source Code Pro',monospace;font-size:10px;color:#bbb;background:#f5f5f5;padding:2px 9px;border-radius:20px;}
+.qcb{padding:14px 16px;}
+
+.play-area{text-align:center;padding:10px 0 14px;}
+.pbtn{background:linear-gradient(135deg,var(--burgundy),#5a1530);color:#fff;border:none;border-radius:50px;padding:11px 28px;font-family:'Noto Serif TC',serif;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(123,31,62,.28);transition:all .2s;letter-spacing:1px;}
+.pbtn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(123,31,62,.38);}
+.pbtn.blue{background:linear-gradient(135deg,var(--navy),#0f2444);box-shadow:0 4px 14px rgba(26,60,110,.25);}
+.pbtn.purple{background:linear-gradient(135deg,var(--purple),#2d0f4e);box-shadow:0 4px 14px rgba(74,26,126,.25);}
+.pcnt{font-family:'Source Code Pro',monospace;font-size:10px;color:#bbb;margin-top:5px;}
+
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;}
+.citem{border:2px solid rgba(0,0,0,.09);border-radius:6px;padding:9px;cursor:pointer;transition:all .2s;background:#fafafa;position:relative;}
+.citem:hover:not(.locked){border-color:var(--navy);background:#eff4ff;transform:translateY(-1px);}
+.citem.correct{border-color:var(--ok)!important;background:#f0faf4!important;}
+.citem.wrong{border-color:var(--bad)!important;background:#fff5f5!important;}
+.citem.locked{cursor:default;}
+.clbl{font-family:'Source Code Pro',monospace;font-size:10px;color:#ccc;text-align:center;margin-bottom:5px;letter-spacing:1px;}
+.ctick{position:absolute;top:7px;right:8px;font-size:14px;display:none;}
+.citem.correct .ctick::after{content:'✓';color:var(--ok);}
+.citem.wrong .ctick::after{content:'✗';color:var(--bad);}
+.citem.correct .ctick,.citem.wrong .ctick{display:block;}
+
+/* Rhythm notation text */
+.rnote{text-align:center;padding:8px 4px;font-size:17px;letter-spacing:3px;color:#333;min-height:40px;line-height:1.4;}
+.rdesc{font-size:10px;color:#aaa;text-align:center;margin-top:3px;letter-spacing:.3px;}
+
+/* Chord choice */
+.ccbody .cname{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;margin-bottom:3px;}
+.ccbody .csemi{font-family:'Source Code Pro',monospace;font-size:10px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:3px;}
+.ccbody .cint{font-size:10px;color:#777;margin-bottom:2px;}
+.ccbody .csound{font-size:11px;color:#888;font-style:italic;margin-bottom:5px;}
+
+/* SCORE */
+#scorescreen{display:none;min-height:100vh;background:linear-gradient(160deg,#1c1408,#2a1a0a);align-items:center;justify-content:center;}
+.sccard{background:var(--cream);border-radius:10px;padding:38px 32px;max-width:420px;width:100%;margin:18px;box-shadow:0 20px 60px rgba(0,0,0,.5);border:2px solid var(--gold);text-align:center;}
+.scstars{font-size:38px;margin-bottom:10px;}
+.scname{font-family:'Playfair Display',serif;font-size:18px;color:var(--burgundy);margin-bottom:3px;}
+.sctotal{font-family:'Source Code Pro',monospace;font-size:62px;font-weight:700;color:var(--navy);line-height:1;}
+.sctotlbl{font-size:12px;color:#aaa;letter-spacing:1px;margin-bottom:18px;}
+.scbd{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:18px 0;}
+.bditem{background:rgba(26,60,110,.06);border-radius:6px;padding:9px;}
+.bdv{font-family:'Source Code Pro',monospace;font-size:20px;font-weight:700;color:var(--navy);}
+.bdl{font-size:10px;color:#aaa;letter-spacing:1px;margin-top:2px;}
+.sctime{font-family:'Source Code Pro',monospace;font-size:15px;color:#aaa;margin:10px 0;}
+.scmsg{font-size:13px;color:#666;line-height:1.6;}
+
+@media(max-width:480px){.cgrid{grid-template-columns:1fr;}.qhdr-name{font-size:12px;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="lbox">
+    <div class="llogo">
+      <div class="ic">🎵</div>
+      <h1>音樂聽寫測驗</h1>
+      <p>學生作答系統</p>
+    </div>
+    <div class="fg"><label class="fl">房間代碼</label><input class="fi code" id="ri" type="text" maxlength="4" placeholder="0000" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+    <div class="fg"><label class="fl">座號</label><input class="fi" id="si" type="number" min="1" max="60" placeholder="例：15" inputmode="numeric"></div>
+    <div class="fg"><label class="fl">姓名</label><input class="fi" id="ni" type="text" placeholder="請輸入真實姓名"></div>
+    <button class="lbtn" onclick="join()">進入測驗 →</button>
+    <div class="lerr" id="lerr"></div>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div id="waiting">
+  <div class="wcard">
+    <div class="wpulse"></div>
+    <div class="wname" id="wname">同學你好！</div>
+    <div class="wsub">等待老師開始測驗…</div>
+    <div style="color:rgba(247,242,230,.25);font-size:10px;margin-top:14px;font-family:'Source Code Pro',monospace" id="wroom"></div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz">
+  <div class="qhdr">
+    <div class="qhdr-name" id="qhname">—</div>
+    <div class="qhdr-r">
+      <div class="qtimer" id="qtimer">00:00</div>
+      <div class="qpw">
+        <div class="qpbar"><div class="qpfill" id="qpfill"></div></div>
+        <div class="qptxt" id="qptxt">0/0</div>
+      </div>
+    </div>
+  </div>
+  <div id="qcont"></div>
+  <div style="padding:18px 14px 40px;text-align:center;">
+    <button id="subbtn" onclick="submitAll()" style="background:linear-gradient(135deg,var(--ok),#1a3d2e);color:#fff;border:none;border-radius:50px;padding:13px 44px;font-family:'Noto Serif TC',serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 18px rgba(45,106,79,.32);display:none;transition:all .2s;">✓ 交卷</button>
+  </div>
+</div>
+
+<!-- SCORE -->
+<div id="scorescreen">
+  <div class="sccard">
+    <div class="scstars" id="scstars">⭐⭐⭐</div>
+    <div class="scname" id="scname"></div>
+    <div class="sctotal" id="sctotal">0</div>
+    <div class="sctotlbl">分（滿分 100）</div>
+    <div class="scbd">
+      <div class="bditem"><div class="bdv" id="sc-r">—</div><div class="bdl">節奏</div></div>
+      <div class="bditem"><div class="bdv" id="sc-m">—</div><div class="bdl">旋律</div></div>
+      <div class="bditem"><div class="bdv" id="sc-c">—</div><div class="bdl">和弦</div></div>
+    </div>
+    <div class="sctime" id="sctime">用時 00:00</div>
+    <div class="scmsg" id="scmsg"></div>
+  </div>
+</div>
+
+<script>
+// ══ AUDIO ══
+let AC;
+function ac(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC;}
+function tone(f,t0,d,v=0.34,tp='triangle'){
+  const o=ac().createOscillator(),g=ac().createGain();
+  o.connect(g);g.connect(ac().destination);o.type=tp;o.frequency.value=f;
+  const n=ac().currentTime;
+  g.gain.setValueAtTime(0,n+t0);g.gain.linearRampToValueAtTime(v,n+t0+.016);
+  g.gain.exponentialRampToValueAtTime(.001,n+t0+d-.025);
+  o.start(n+t0);o.stop(n+t0+d);
+}
+const FR={C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,Gs4:415.3,Eb4:311.13,Bb4:466.16};
+const BT=0.46;
+
+// ══ CANVAS ══
+const LG=10,ST=20;
+function stf(ctx,x0,x1,top){ctx.strokeStyle='#444';ctx.lineWidth=1;for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(x0,top+i*LG);ctx.lineTo(x1,top+i*LG);ctx.stroke();}}
+function clef(ctx,x,top){ctx.fillStyle='#222';ctx.font=`bold ${LG*4}px serif`;ctx.fillText('𝄞',x,top+LG*4+3);}
+const NY={G3:LG*5,A3:LG*4.5,B3:LG*4,C4:LG*3.5,D4:LG*3,E4:LG*2.5,F4:LG*2,G4:LG*1.5,A4:LG,B4:LG*.5,C5:0,D5:-LG*.5,E5:-LG,F5:-LG*1.5,Gs4:LG*1.5,Eb4:LG*2.5,Bb4:LG*.5};
+function ny(n,top){return top+(NY[n]??LG*2);}
+
+function nhead(ctx,x,y,filled){ctx.beginPath();ctx.ellipse(x,y,5.5,4,Math.PI/8,0,Math.PI*2);if(filled){ctx.fillStyle='#222';ctx.fill();}else{ctx.strokeStyle='#222';ctx.lineWidth=1.5;ctx.stroke();}}
+function stem(ctx,x,y,up){ctx.strokeStyle='#222';ctx.lineWidth=1.4;ctx.beginPath();if(up){ctx.moveTo(x+5.5,y);ctx.lineTo(x+5.5,y-LG*3.5);}else{ctx.moveTo(x-5.5,y);ctx.lineTo(x-5.5,y+LG*3.5);}ctx.stroke();}
+function flag(ctx,x,y,up){ctx.strokeStyle='#222';ctx.lineWidth=1.3;ctx.beginPath();if(up){ctx.moveTo(x+5.5,y-LG*3.5);ctx.quadraticCurveTo(x+18,y-LG*2.5,x+12,y-LG*1.2);}else{ctx.moveTo(x-5.5,y+LG*3.5);ctx.quadraticCurveTo(x+7,y+LG*2.5,x+1,y+LG*1.2);}ctx.stroke();}
+function ledger(ctx,x,y){ctx.strokeStyle='#444';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-9,y);ctx.lineTo(x+9,y);ctx.stroke();}
+function acc(ctx,x,y,t){ctx.fillStyle='#222';ctx.font=`bold ${LG*1.3}px serif`;ctx.fillText(t,x-11,y+4);}
+function dot(ctx,x,y){ctx.fillStyle='#222';ctx.beginPath();ctx.arc(x+9,y-1.5,2,0,Math.PI*2);ctx.fill();}
+
+function drawNote(ctx,x,name,dur,top){
+  const y=ny(name,top),up=y>=top+LG*2,filled=dur!=='h'&&dur!=='w';
+  if(name==='C4'||name==='Eb4') ledger(ctx,x,top+LG*3.5);
+  if(name==='C5') ledger(ctx,x,top);
+  if(name==='A3'||name==='G3'||name==='B3') ledger(ctx,x,top+LG*3.5);
+  if(name.includes('s')&&!name.startsWith('C5')) acc(ctx,x,y,'♯');
+  if(name.includes('b')&&!name.startsWith('B')) acc(ctx,x,y,'♭');
+  if(name.includes('Eb')) acc(ctx,x,y,'♭');
+  nhead(ctx,x,y,filled);
+  if(dur!=='w'){stem(ctx,x,y,up);if(dur==='e'||dur==='ed')flag(ctx,x,y,up);}
+  if(dur==='qd'||dur==='ed') dot(ctx,x,y);
+}
+
+function beam(ctx,xs,names,top){
+  const ys=names.map(n=>ny(n,top));
+  xs.forEach((x,i)=>{ctx.strokeStyle='#222';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(x+5.5,ys[i]);ctx.lineTo(x+5.5,ys[i]-LG*3.5);ctx.stroke();nhead(ctx,x,ys[i],true);});
+  ctx.strokeStyle='#222';ctx.lineWidth=2.8;ctx.beginPath();ctx.moveTo(xs[0]+5.5,ys[0]-LG*3.5);ctx.lineTo(xs[xs.length-1]+5.5,ys[xs.length-1]-LG*3.5);ctx.stroke();
+}
+function triplet(ctx,xs,names,top){
+  beam(ctx,xs,names,top);
+  const mx=(xs[0]+xs[xs.length-1])/2,my=Math.min(...names.map(n=>ny(n,top)))-LG*4.2;
+  ctx.fillStyle='#777';ctx.font='10px serif';ctx.textAlign='center';ctx.fillText('3',mx,my);ctx.textAlign='left';
+  ctx.strokeStyle='#aaa';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.moveTo(xs[0]+5.5,my+2);ctx.lineTo(mx-5,my+2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(mx+5,my+2);ctx.lineTo(xs[xs.length-1]+5.5,my+2);ctx.stroke();
+}
+function tie(ctx,x1,y1,x2,y2){ctx.strokeStyle='#666';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x1+5,y1+4);ctx.quadraticCurveTo((x1+x2)/2,y1+13,x2-5,y2+4);ctx.stroke();}
+function dothalf(ctx,x,top){const y=ny('G4',top);ctx.strokeStyle='#222';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x+8,y,5.5,4,Math.PI/8,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(x+13.5,y);ctx.lineTo(x+13.5,y-LG*3.5);ctx.stroke();ctx.fillStyle='#222';ctx.beginPath();ctx.arc(x+20,y-1.5,2,0,Math.PI*2);ctx.fill();}
+
+// Make canvas
+function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+
+function buildRhythmCanvas(drawFn,w=230,h=76){
+  const c=mkCanvas(w,h),ctx=c.getContext('2d'),top=ST,lx=42;
+  ctx.clearRect(0,0,w,h);stf(ctx,lx-6,w-8,top);clef(ctx,lx-12,top);
+  drawFn(ctx,top,lx);c.style.maxWidth='100%';return c;
+}
+function buildMelodyCanvas(noteSeq,w=250,h=80){
+  const c=mkCanvas(w,h),ctx=c.getContext('2d'),top=ST,lx=40;
+  ctx.clearRect(0,0,w,h);stf(ctx,lx-6,w-8,top);clef(ctx,lx-12,top);
+  const sp=Math.min(23,(w-lx-26)/noteSeq.length);
+  noteSeq.forEach((n,i)=>drawNote(ctx,lx+14+i*sp,n,'q',top));
+  c.style.maxWidth='100%';return c;
+}
+function buildChordCanvas(notes,w=110,h=76){
+  const c=mkCanvas(w,h),ctx=c.getContext('2d'),top=ST;
+  ctx.clearRect(0,0,w,h);stf(ctx,12,w-8,top);clef(ctx,8,top);
+  notes.forEach(n=>drawNote(ctx,62,n,'w',top));
+  c.style.maxWidth='100%';return c;
+}
+
+// ══ QUESTION DATA ══
+const RD={
+  all_q:(ctx,top,lx)=>{for(let i=0;i<4;i++)drawNote(ctx,lx+i*26,'G4','q',top);},
+  dotq_e:(ctx,top,lx)=>{drawNote(ctx,lx,'G4','qd',top);drawNote(ctx,lx+32,'G4','e',top);drawNote(ctx,lx+54,'G4','q',top);drawNote(ctx,lx+80,'G4','q',top);},
+  ee_q_q:(ctx,top,lx)=>{beam(ctx,[lx,lx+18],['G4','G4'],top);drawNote(ctx,lx+40,'G4','q',top);drawNote(ctx,lx+66,'G4','q',top);drawNote(ctx,lx+92,'G4','q',top);},
+  syn:(ctx,top,lx)=>{drawNote(ctx,lx,'G4','e',top);drawNote(ctx,lx+20,'G4','q',top);beam(ctx,[lx+44,lx+62],['G4','G4'],top);drawNote(ctx,lx+84,'G4','q',top);drawNote(ctx,lx+108,'G4','e',top);},
+  trip:(ctx,top,lx)=>{triplet(ctx,[lx,lx+22,lx+44],['G4','G4','G4'],top);drawNote(ctx,lx+72,'G4','q',top);drawNote(ctx,lx+100,'G4','q',top);},
+  half_q:(ctx,top,lx)=>{drawNote(ctx,lx,'G4','h',top);drawNote(ctx,lx+42,'G4','q',top);},
+  tie_cr:(ctx,top,lx)=>{const y=ny('G4',top);drawNote(ctx,lx,'G4','h',top);drawNote(ctx,lx+42,'G4','e',top);tie(ctx,lx,y,lx+42,y);drawNote(ctx,lx+64,'G4','q',top);},
+  six8:(ctx,top,lx)=>{beam(ctx,[lx,lx+16,lx+32],['G4','G4','G4'],top);beam(ctx,[lx+50,lx+66,lx+82],['G4','G4','G4'],top);},
+  six8s:(ctx,top,lx)=>{drawNote(ctx,lx,'G4','e',top);drawNote(ctx,lx+18,'G4','q',top);drawNote(ctx,lx+38,'G4','e',top);drawNote(ctx,lx+56,'G4','e',top);drawNote(ctx,lx+74,'G4','q',top);drawNote(ctx,lx+94,'G4','e',top);},
+  dot34:(ctx,top,lx)=>{dothalf(ctx,lx,top);},
+  t3q:(ctx,top,lx)=>{for(let i=0;i<3;i++)drawNote(ctx,lx+i*28,'G4','q',top);},
+  hq34:(ctx,top,lx)=>{drawNote(ctx,lx,'G4','h',top);drawNote(ctx,lx+40,'G4','q',top);},
+  qde34:(ctx,top,lx)=>{drawNote(ctx,lx,'G4','q',top);drawNote(ctx,lx+26,'G4','qd',top);drawNote(ctx,lx+58,'G4','e',top);},
+  cpx:(ctx,top,lx)=>{beam(ctx,[lx,lx+16],['G4','G4'],top);drawNote(ctx,lx+36,'G4','q',top);beam(ctx,[lx+60,lx+76],['G4','G4'],top);drawNote(ctx,lx+96,'G4','q',top);},
+};
+
+const RA={
+  dotq_e:[{f:440,t:0,d:BT*1.5},{f:440,t:BT*1.5,d:BT*.5},{f:440,t:BT*2,d:BT},{f:440,t:BT*3,d:BT}],
+  syn:[{f:440,t:0,d:BT*.5},{f:440,t:BT*.5,d:BT},{f:440,t:BT*1.5,d:BT*.5},{f:440,t:BT*2,d:BT*.5},{f:440,t:BT*2.5,d:BT},{f:440,t:BT*3.5,d:BT*.5}],
+  six8:[{f:440,t:0,d:BT*.5},{f:440,t:BT*.5,d:BT*.5},{f:440,t:BT,d:BT*.5},{f:440,t:BT*1.5,d:BT*.5},{f:440,t:BT*2,d:BT*.5},{f:440,t:BT*2.5,d:BT*.5}],
+  trip:[{f:440,t:0,d:BT*.64},{f:440,t:BT*.67,d:BT*.64},{f:440,t:BT*1.34,d:BT*.64},{f:440,t:BT*2,d:BT},{f:440,t:BT*3,d:BT}],
+  tie:[{f:440,t:0,d:BT*2.5},{f:440,t:BT*2.5,d:BT*.5},{f:440,t:BT*3,d:BT}],
+  dot34:[{f:440,t:0,d:BT*3}],
+  cpx:[{f:440,t:0,d:BT*.5},{f:440,t:BT*.5,d:BT*.5},{f:440,t:BT,d:BT},{f:440,t:BT*2,d:BT*.5},{f:440,t:BT*2.5,d:BT*.5},{f:440,t:BT*3,d:BT}],
+  six8s:[{f:440,t:0,d:BT*.5},{f:440,t:BT*.5,d:BT},{f:440,t:BT*1.5,d:BT*.5},{f:440,t:BT*2,d:BT*.5},{f:440,t:BT*2.5,d:BT},{f:440,t:BT*3.5,d:BT*.5}],
+  all_q:[{f:440,t:0,d:BT},{f:440,t:BT,d:BT},{f:440,t:BT*2,d:BT},{f:440,t:BT*3,d:BT}],
+  half_q:[{f:440,t:0,d:BT*2},{f:440,t:BT*2,d:BT}],
+  t3q:[{f:440,t:0,d:BT},{f:440,t:BT,d:BT},{f:440,t:BT*2,d:BT}],
+  hq34:[{f:440,t:0,d:BT*2},{f:440,t:BT*2,d:BT}],
+  ee_q_q:[{f:440,t:0,d:BT*.5},{f:440,t:BT*.5,d:BT*.5},{f:440,t:BT,d:BT},{f:440,t:BT*2,d:BT},{f:440,t:BT*3,d:BT}],
+  qde34:[{f:440,t:0,d:BT},{f:440,t:BT,d:BT*1.5},{f:440,t:BT*2.5,d:BT*.5}],
+};
+
+const RPOOL=[
+  {id:'r1',section:'rhythm',label:'附點節奏',meter:'4/4',audioKey:'dotq_e',correctIdx:1,
+   choices:[{drawFn:RD.all_q,note:'♩ ♩ ♩ ♩',desc:'四個四分音符',akey:'all_q'},{drawFn:RD.dotq_e,note:'♩. ♪ ♩ ♩',desc:'附點四分＋八分＋四分＋四分',akey:'dotq_e'},{drawFn:RD.ee_q_q,note:'♪♪ ♩ ♩ ♩',desc:'八分對＋三個四分',akey:'ee_q_q'},{drawFn:RD.half_q,note:'𝅗𝅥 ♩ ♩',desc:'二分音符＋兩個四分',akey:'half_q'}]},
+  {id:'r2',section:'rhythm',label:'切分節奏',meter:'4/4',audioKey:'syn',correctIdx:2,
+   choices:[{drawFn:RD.all_q,note:'♩ ♩ ♩ ♩',desc:'四個四分音符',akey:'all_q'},{drawFn:RD.dotq_e,note:'♩. ♪ ♩ ♩',desc:'附點四分＋八分',akey:'dotq_e'},{drawFn:RD.syn,note:'♪ ♩ ♪ ♪ ♩ ♪',desc:'切分節奏（弱拍延伸至強拍）',akey:'syn'},{drawFn:RD.trip,note:'₃[♪♪♪] ♩ ♩',desc:'三連音＋兩個四分',akey:'trip'}]},
+  {id:'r3',section:'rhythm',label:'6/8拍',meter:'6/8',audioKey:'six8',correctIdx:3,
+   choices:[{drawFn:RD.t3q,note:'♩ ♩ ♩',desc:'三個四分音符（3/4拍）',akey:'t3q'},{drawFn:RD.dot34,note:'𝅗𝅥.',desc:'附點二分音符',akey:'dot34'},{drawFn:RD.hq34,note:'𝅗𝅥 ♩',desc:'二分音符＋四分音符',akey:'hq34'},{drawFn:RD.six8,note:'♪♪♪ ♪♪♪',desc:'六個八分音符（兩組三拍）',akey:'six8'}]},
+  {id:'r4',section:'rhythm',label:'三連音',meter:'4/4',audioKey:'trip',correctIdx:0,
+   choices:[{drawFn:RD.trip,note:'₃[♪♪♪] ♩ ♩',desc:'三連音＋兩個四分（三音佔兩拍）',akey:'trip'},{drawFn:RD.dotq_e,note:'♩. ♪ ♩ ♩',desc:'附點四分＋八分＋兩個四分',akey:'dotq_e'},{drawFn:RD.ee_q_q,note:'♪♪ ♩ ♩ ♩',desc:'八分對＋三個四分',akey:'ee_q_q'},{drawFn:RD.syn,note:'♪ ♩ ♪ ♪ ♩ ♪',desc:'切分節奏型',akey:'syn'}]},
+  {id:'r5',section:'rhythm',label:'連結線跨拍',meter:'4/4',audioKey:'tie',correctIdx:1,
+   choices:[{drawFn:RD.half_q,note:'𝅗𝅥 ♩ ♩',desc:'二分音符＋兩個四分',akey:'half_q'},{drawFn:RD.tie_cr,note:'𝅗𝅥⌒♪ ♩',desc:'二分連結八分（跨拍延伸）',akey:'tie'},{drawFn:RD.dotq_e,note:'♩. ♪ ♩ ♩',desc:'附點四分＋八分',akey:'dotq_e'},{drawFn:RD.all_q,note:'♩ ♩ ♩ ♩',desc:'四個四分音符',akey:'all_q'}]},
+  {id:'r6',section:'rhythm',label:'3/4附點二分',meter:'3/4',audioKey:'dot34',correctIdx:2,
+   choices:[{drawFn:RD.t3q,note:'♩ ♩ ♩',desc:'三個四分音符（各佔一拍）',akey:'t3q'},{drawFn:RD.qde34,note:'♩ ♩. ♪',desc:'四分＋附點四分＋八分',akey:'qde34'},{drawFn:RD.dot34,note:'𝅗𝅥.',desc:'附點二分（佔滿三拍）',akey:'dot34'},{drawFn:RD.hq34,note:'𝅗𝅥 ♩',desc:'二分音符＋四分音符',akey:'hq34'}]},
+  {id:'r7',section:'rhythm',label:'複合節奏',meter:'4/4',audioKey:'cpx',correctIdx:3,
+   choices:[{drawFn:RD.all_q,note:'♩ ♩ ♩ ♩',desc:'四個四分音符',akey:'all_q'},{drawFn:RD.trip,note:'₃[♪♪♪] ♩ ♩',desc:'三連音＋兩個四分',akey:'trip'},{drawFn:RD.dotq_e,note:'♩. ♪ ♩ ♩',desc:'附點四分＋八分',akey:'dotq_e'},{drawFn:RD.cpx,note:'♪♪ ♩ ♪♪ ♩',desc:'八分對＋四分，重複兩次',akey:'cpx'}]},
+  {id:'r8',section:'rhythm',label:'6/8切分',meter:'6/8',audioKey:'six8s',correctIdx:0,
+   choices:[{drawFn:RD.six8s,note:'♪ ♩ ♪ ♪ ♩ ♪',desc:'6/8拍切分節奏（弱拍延伸）',akey:'six8s'},{drawFn:RD.six8,note:'♪♪♪ ♪♪♪',desc:'六個均等八分音符',akey:'six8'},{drawFn:RD.dot34,note:'𝅗𝅥.',desc:'附點二分音符',akey:'dot34'},{drawFn:RD.t3q,note:'♩ ♩ ♩',desc:'三個四分音符',akey:'t3q'}]},
+];
+
+const MPOOL=[
+  {id:'m1',section:'melody',label:'小星星',key:'C大調',noteSeq:['C4','C4','G4','G4','A4','A4','G4'],correctIdx:0,
+   choices:[{noteSeq:['C4','C4','G4','G4','A4','A4','G4']},{noteSeq:['C4','D4','E4','F4','G4','A4','G4']},{noteSeq:['E4','E4','D4','D4','C4','C4','D4']},{noteSeq:['G4','G4','A4','A4','B4','B4','A4']}]},
+  {id:'m2',section:'melody',label:'月亮代表我的心',key:'C大調',noteSeq:['E4','E4','F4','G4','G4','F4','E4','D4','C4'],correctIdx:2,
+   choices:[{noteSeq:['C4','C4','D4','E4','E4','D4','C4','C4']},{noteSeq:['G4','A4','B4','C5','B4','A4','G4','G4']},{noteSeq:['E4','E4','F4','G4','G4','F4','E4','D4','C4']},{noteSeq:['C4','E4','G4','E4','C4','E4','G4','E4']}]},
+  {id:'m3',section:'melody',label:'夜空中最亮的星',key:'C大調',noteSeq:['G4','G4','A4','G4','E4','C4'],correctIdx:1,
+   choices:[{noteSeq:['E4','D4','C4','D4','E4','G4','A4']},{noteSeq:['G4','G4','A4','G4','E4','C4']},{noteSeq:['C4','E4','G4','A4','G4','E4']},{noteSeq:['A4','G4','E4','C4','D4','E4']}]},
+  {id:'m4',section:'melody',label:'Canon主題',key:'C大調',noteSeq:['A4','B4','C5','D5','E5','F5','E5','D5'],correctIdx:3,
+   choices:[{noteSeq:['C4','D4','E4','F4','G4','A4','G4','F4']},{noteSeq:['E4','F4','G4','A4','B4','C5','B4','A4']},{noteSeq:['G4','A4','B4','C5','D5','E5','D5','C5']},{noteSeq:['A4','B4','C5','D5','E5','F5','E5','D5']}]},
+  {id:'m5',section:'melody',label:'Someone Like You',key:'a小調',noteSeq:['A3','C4','E4','A4','G4','E4'],correctIdx:0,
+   choices:[{noteSeq:['A3','C4','E4','A4','G4','E4']},{noteSeq:['A3','B3','C4','D4','E4','F4']},{noteSeq:['C4','D4','E4','G4','A4','G4']},{noteSeq:['E4','D4','C4','B3','A3','G3']}]},
+  {id:'m6',section:'melody',label:'稻香副歌',key:'C大調',noteSeq:['E4','D4','C4','D4','E4','G4'],correctIdx:2,
+   choices:[{noteSeq:['C4','D4','E4','F4','G4','A4']},{noteSeq:['G4','F4','E4','D4','C4','D4']},{noteSeq:['E4','D4','C4','D4','E4','G4']},{noteSeq:['A4','G4','E4','C4','E4','G4']}]},
+];
+
+const CPOOL=[
+  {id:'c1',section:'chord',label:'C大三和弦',notes:['C4','E4','G4'],correctIdx:0,arp:false,
+   choices:[
+     {name:'大三和弦',label:'Major',color:'#1a3c6e',semi:'根→大三度（4半音）→純五度（7半音）',ints:'大三度＋小三度',sound:'🔆 明亮・開朗・穩定',notes:['C4','E4','G4']},
+     {name:'小三和弦',label:'Minor',color:'#7b1f3e',semi:'根→小三度（3半音）→純五度（7半音）',ints:'小三度＋大三度',sound:'🌙 憂鬱・柔和・感傷',notes:['C4','Eb4','G4']},
+     {name:'增三和弦',label:'Aug +',color:'#8b3a1a',semi:'根→大三度（4半音）→增五度（8半音）',ints:'大三度＋大三度',sound:'⚡ 緊張・不安定・尖銳',notes:['C4','E4','Gs4']},
+     {name:'減三和弦',label:'Dim °',color:'#4a1a7e',semi:'根→小三度（3半音）→減五度（6半音）',ints:'小三度＋小三度',sound:'😨 陰暗・收縮・壓迫',notes:['B3','D4','F4']},
+   ]},
+  {id:'c2',section:'chord',label:'a小三和弦',notes:['A3','C4','E4'],correctIdx:1,arp:true,
+   choices:[
+     {name:'大三和弦',label:'Major',color:'#1a3c6e',semi:'根→大三度（4半音）→純五度（7半音）',ints:'大三度＋小三度',sound:'🔆 明亮・開朗・穩定',notes:['C4','E4','G4']},
+     {name:'小三和弦',label:'Minor',color:'#7b1f3e',semi:'根→小三度（3半音）→純五度（7半音）',ints:'小三度＋大三度',sound:'🌙 憂鬱・柔和・感傷',notes:['A3','C4','E4']},
+     {name:'增三和弦',label:'Aug +',color:'#8b3a1a',semi:'根→大三度（4半音）→增五度（8半音）',ints:'大三度＋大三度',sound:'⚡ 緊張・不安定・尖銳',notes:['C4','E4','Gs4']},
+     {name:'減三和弦',label:'Dim °',color:'#4a1a7e',semi:'根→小三度（3半音）→減五度（6半音）',ints:'小三度＋小三度',sound:'😨 陰暗・收縮・壓迫',notes:['B3','D4','F4']},
+   ]},
+  {id:'c3',section:'chord',label:'增三和弦',notes:['C4','E4','Gs4'],correctIdx:2,arp:false,
+   choices:[
+     {name:'大三和弦',label:'Major',color:'#1a3c6e',semi:'根→大三度（4半音）→純五度（7半音）',ints:'大三度＋小三度',sound:'🔆 明亮・開朗・穩定',notes:['C4','E4','G4']},
+     {name:'小三和弦',label:'Minor',color:'#7b1f3e',semi:'根→小三度（3半音）→純五度（7半音）',ints:'小三度＋大三度',sound:'🌙 憂鬱・柔和・感傷',notes:['A3','C4','E4']},
+     {name:'增三和弦',label:'Aug +',color:'#8b3a1a',semi:'根→大三度（4半音）→增五度（8半音）',ints:'大三度＋大三度',sound:'⚡ 緊張・不安定・尖銳',notes:['C4','E4','Gs4']},
+     {name:'減三和弦',label:'Dim °',color:'#4a1a7e',semi:'根→小三度（3半音）→減五度（6半音）',ints:'小三度＋小三度',sound:'😨 陰暗・收縮・壓迫',notes:['B3','D4','F4']},
+   ]},
+  {id:'c4',section:'chord',label:'減三和弦',notes:['B3','D4','F4'],correctIdx:3,arp:true,
+   choices:[
+     {name:'大三和弦',label:'Major',color:'#1a3c6e',semi:'根→大三度（4半音）→純五度（7半音）',ints:'大三度＋小三度',sound:'🔆 明亮・開朗・穩定',notes:['C4','E4','G4']},
+     {name:'小三和弦',label:'Minor',color:'#7b1f3e',semi:'根→小三度（3半音）→純五度（7半音）',ints:'小三度＋大三度',sound:'🌙 憂鬱・柔和・感傷',notes:['A3','C4','E4']},
+     {name:'增三和弦',label:'Aug +',color:'#8b3a1a',semi:'根→大三度（4半音）→增五度（8半音）',ints:'大三度＋大三度',sound:'⚡ 緊張・不安定・尖銳',notes:['C4','E4','Gs4']},
+     {name:'減三和弦',label:'Dim °',color:'#4a1a7e',semi:'根→小三度（3半音）→減五度（6半音）',ints:'小三度＋小三度',sound:'😨 陰暗・收縮・壓迫',notes:['B3','D4','F4']},
+   ]},
+  {id:'c5',section:'chord',label:'屬七原位V⁷',notes:['G3','B3','D4','F4'],correctIdx:0,arp:false,
+   choices:[
+     {name:'V⁷ 原位',label:'V⁷',color:'#4a1a7e',semi:'最低音＝根音 G',ints:'G-B-D-F',sound:'💥 最強張力・強烈導向主和弦',notes:['G3','B3','D4','F4']},
+     {name:'V⁶₅ 第一轉位',label:'V⁶₅',color:'#4a1a7e',semi:'最低音＝三音 B',ints:'B-D-F-G',sound:'🌊 柔和屬七・內聲部常用',notes:['B3','D4','F4','G4']},
+     {name:'V⁴₃ 第二轉位',label:'V⁴₃',color:'#4a1a7e',semi:'最低音＝五音 D',ints:'D-F-G-B',sound:'🌀 不穩定・聲部進行感強',notes:['D4','F4','G4','B4']},
+     {name:'V² 第三轉位',label:'V²',color:'#4a1a7e',semi:'最低音＝七音 F',ints:'F-G-B-D',sound:'🔥 最不穩定・強烈要求解決',notes:['F4','G4','B4','D5']},
+   ]},
+  {id:'c6',section:'chord',label:'屬七第一轉位V⁶₅',notes:['B3','D4','F4','G4'],correctIdx:1,arp:true,
+   choices:[
+     {name:'V⁷ 原位',label:'V⁷',color:'#4a1a7e',semi:'最低音＝根音 G',ints:'G-B-D-F',sound:'💥 最強張力・強烈導向主和弦',notes:['G3','B3','D4','F4']},
+     {name:'V⁶₅ 第一轉位',label:'V⁶₅',color:'#4a1a7e',semi:'最低音＝三音 B',ints:'B-D-F-G',sound:'🌊 柔和屬七・內聲部常用',notes:['B3','D4','F4','G4']},
+     {name:'V⁴₃ 第二轉位',label:'V⁴₃',color:'#4a1a7e',semi:'最低音＝五音 D',ints:'D-F-G-B',sound:'🌀 不穩定・聲部進行感強',notes:['D4','F4','G4','B4']},
+     {name:'V² 第三轉位',label:'V²',color:'#4a1a7e',semi:'最低音＝七音 F',ints:'F-G-B-D',sound:'🔥 最不穩定・強烈要求解決',notes:['F4','G4','B4','D5']},
+   ]},
+  {id:'c7',section:'chord',label:'屬七第二轉位V⁴₃',notes:['D4','F4','G4','B4'],correctIdx:2,arp:false,
+   choices:[
+     {name:'V⁷ 原位',label:'V⁷',color:'#4a1a7e',semi:'最低音＝根音 G',ints:'G-B-D-F',sound:'💥 最強張力・強烈導向主和弦',notes:['G3','B3','D4','F4']},
+     {name:'V⁶₅ 第一轉位',label:'V⁶₅',color:'#4a1a7e',semi:'最低音＝三音 B',ints:'B-D-F-G',sound:'🌊 柔和屬七・內聲部常用',notes:['B3','D4','F4','G4']},
+     {name:'V⁴₃ 第二轉位',label:'V⁴₃',color:'#4a1a7e',semi:'最低音＝五音 D',ints:'D-F-G-B',sound:'🌀 不穩定・聲部進行感強',notes:['D4','F4','G4','B4']},
+     {name:'V² 第三轉位',label:'V²',color:'#4a1a7e',semi:'最低音＝七音 F',ints:'F-G-B-D',sound:'🔥 最不穩定・強烈要求解決',notes:['F4','G4','B4','D5']},
+   ]},
+  {id:'c8',section:'chord',label:'屬七第三轉位V²',notes:['F4','G4','B4','D5'],correctIdx:3,arp:true,
+   choices:[
+     {name:'V⁷ 原位',label:'V⁷',color:'#4a1a7e',semi:'最低音＝根音 G',ints:'G-B-D-F',sound:'💥 最強張力・強烈導向主和弦',notes:['G3','B3','D4','F4']},
+     {name:'V⁶₅ 第一轉位',label:'V⁶₅',color:'#4a1a7e',semi:'最低音＝三音 B',ints:'B-D-F-G',sound:'🌊 柔和屬七・內聲部常用',notes:['B3','D4','F4','G4']},
+     {name:'V⁴₃ 第二轉位',label:'V⁴₃',color:'#4a1a7e',semi:'最低音＝五音 D',ints:'D-F-G-B',sound:'🌀 不穩定・聲部進行感強',notes:['D4','F4','G4','B4']},
+     {name:'V² 第三轉位',label:'V²',color:'#4a1a7e',semi:'最低音＝七音 F',ints:'F-G-B-D',sound:'🔥 最不穩定・強烈要求解決',notes:['F4','G4','B4','D5']},
+   ]},
+];
+
+// ══ APP STATE ══
+let info=null,rcode=null,qs=[],ans={},startTs=null,timerInt=null;
+function shuf(a){return[...a].sort(()=>Math.random()-.5);}
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');}
+
+async function join(){
+  const code=document.getElementById('ri').value.trim();
+  const seat=parseInt(document.getElementById('si').value);
+  const name=document.getElementById('ni').value.trim();
+  const err=document.getElementById('lerr');
+  if(!code||code.length!==4){err.textContent='請輸入4位代碼';return;}
+  if(!seat||seat<1||seat>60){err.textContent='請輸入正確座號';return;}
+  if(!name){err.textContent='請輸入姓名';return;}
+  if(!window._db){err.textContent='Firebase 未設定，請聯繫老師';return;}
+  err.textContent='連線中…';
+  try{
+    const snap=await window._get(window._ref(window._db,'rooms/'+code));
+    if(!snap.exists()){err.textContent='找不到此房間';return;}
+    const room=snap.val();
+    if(room.status==='ended'){err.textContent='此測驗已結束';return;}
+    rcode=code; info={seatNo:seat,name,status:'waiting',joinedAt:Date.now()};
+    await window._update(window._ref(window._db,'rooms/'+rcode+'/students/'+seat),info);
+    document.getElementById('login').style.display='none';
+    document.getElementById('waiting').style.display='flex';
+    document.getElementById('wname').textContent=seat+'號 '+name+' 同學，你好！';
+    document.getElementById('wroom').textContent='房間 '+code+' ｜ '+room.className;
+    pollStart(room);
+  }catch(e){err.textContent='連線失敗，請重試';console.error(e);}
+}
+
+function pollStart(room){
+  if(room.status==='active'){startQuiz(room);return;}
+  const unsub=window._onValue(window._ref(window._db,'rooms/'+rcode+'/status'),snap=>{
+    if(snap.val()==='active'){
+      unsub();
+      window._get(window._ref(window._db,'rooms/'+rcode)).then(s=>startQuiz(s.val()));
+    }
+  });
+}
+
+function startQuiz(room){
+  document.getElementById('waiting').style.display='none';
+  document.getElementById('quiz').style.display='block';
+  document.getElementById('qhname').textContent=info.seatNo+'號 '+info.name;
+  const types=room.types||['rhythm','melody','chord'];
+  const n=room.qCount||5;
+  qs=[];
+  if(types.includes('rhythm')) qs.push(...shuf(RPOOL).slice(0,Math.min(n,RPOOL.length)));
+  if(types.includes('melody')) qs.push(...shuf(MPOOL).slice(0,Math.min(n,MPOOL.length)));
+  if(types.includes('chord'))  qs.push(...shuf(CPOOL).slice(0,Math.min(n,CPOOL.length)));
+  renderQs();
+  startTs=Date.now();
+  window._update(window._ref(window._db,'rooms/'+rcode+'/students/'+info.seatNo),{status:'doing',startedAt:startTs});
+  timerInt=setInterval(()=>{const s=Math.floor((Date.now()-startTs)/1000);document.getElementById('qtimer').textContent=fmt(s);},1000);
+}
+
+function renderQs(){
+  const cont=document.getElementById('qcont'); cont.innerHTML='';
+  let lastSec='';
+  qs.forEach((q,qi)=>{
+    if(q.section!==lastSec){
+      const labels={rhythm:'♩ 節奏聽寫',melody:'🎵 旋律聽寫',chord:'🎹 和弦聽寫'};
+      const colors={rhythm:'red',melody:'',chord:'purple'};
+      const d=document.createElement('div');d.className='sdiv '+(colors[q.section]||'');
+      d.textContent=labels[q.section];cont.appendChild(d);lastSec=q.section;
+    }
+    const card=document.createElement('div');card.className='qcard';
+    const ch=document.createElement('div');ch.className='qch '+q.section;
+    ch.innerHTML=`<span class="qnum">第 ${qi+1} 題</span><span class="qlbl">${q.label}</span>${q.meter?`<span class="qmeter">${q.meter}</span>`:''}`;
+    card.appendChild(ch);
+    const cb=document.createElement('div');cb.className='qcb';
+    // Play button
+    const pa=document.createElement('div');pa.className='play-area';
+    const bc=q.section==='chord'?'purple':q.section==='melody'?'blue':'';
+    const pb=document.createElement('button');pb.className='pbtn '+bc;pb.innerHTML='▶ 播放';
+    const pc=document.createElement('div');pc.className='pcnt';pc.id='pc'+q.id;
+    let pcnt=0;
+    pb.onclick=()=>{
+      pcnt++;pc.textContent='已播 '+pcnt+' 次';
+      if(q.section==='rhythm') RA[q.audioKey].forEach(e=>tone(e.f,e.t,e.d,0.38,'square'));
+      else if(q.section==='melody'){let t=0;q.noteSeq.forEach(n=>{tone(FR[n]||261.63,t,0.36,0.34,'sine');t+=0.4;});}
+      else if(q.section==='chord') q.notes.forEach((n,i)=>tone(FR[n]||261.63,q.arp?i*.11:0,q.arp?.5:.72,0.3,'triangle'));
+    };
+    pa.appendChild(pb);pa.appendChild(pc);cb.appendChild(pa);
+    // Choices grid
+    const cg=document.createElement('div');cg.className='cgrid';
+    q.choices.forEach((ch2,ci)=>{
+      const item=document.createElement('div');item.className='citem';
+      item.dataset.qi=qi;item.dataset.ci=ci;
+      const tick=document.createElement('div');tick.className='ctick';item.appendChild(tick);
+      const lbl=document.createElement('div');lbl.className='clbl';lbl.textContent='ABCD'[ci];item.appendChild(lbl);
+      if(q.section==='rhythm'){
+        const c=buildRhythmCanvas(ch2.drawFn);item.appendChild(c);
+        const nd=document.createElement('div');nd.className='rdesc';nd.textContent=ch2.desc||'';item.appendChild(nd);
+      } else if(q.section==='melody'){
+        item.appendChild(buildMelodyCanvas(ch2.noteSeq));
+      } else if(q.section==='chord'){
+        const cc=document.createElement('div');cc.className='ccbody';
+        cc.innerHTML=`<div class="cname" style="color:${ch2.color}">${ch2.name} <small style="font-size:11px;opacity:.65">${ch2.label}</small></div>
+          <span class="csemi">${ch2.semi}</span>
+          <div class="cint">音程：${ch2.ints}</div>
+          <div class="csound">${ch2.sound}</div>`;
+        cc.appendChild(buildChordCanvas(ch2.notes));item.appendChild(cc);
+      }
+      item.onclick=()=>pick(qi,ci,q,item);
+      cg.appendChild(item);
+    });
+    cb.appendChild(cg);card.appendChild(cb);cont.appendChild(card);
+  });
+  document.getElementById('subbtn').style.display='block';
+  updateProg();
+}
+
+function pick(qi,ci,q,item){
+  if(item.classList.contains('locked'))return;
+  document.querySelectorAll(`.citem[data-qi="${qi}"]`).forEach(el=>el.classList.remove('selected'));
+  item.classList.add('selected');
+  ans[q.id]={chosen:ci,correct:q.correctIdx,section:q.section};
+  updateProg();
+}
+
+function updateProg(){
+  const a=Object.keys(ans).length,t=qs.length;
+  document.getElementById('qptxt').textContent=a+'/'+t;
+  document.getElementById('qpfill').style.width=(a/t*100)+'%';
+}
+
+async function submitAll(){
+  qs.forEach((q,qi)=>{
+    document.querySelectorAll(`.citem[data-qi="${qi}"]`).forEach((el,ci)=>{
+      el.classList.add('locked');
+      const a=ans[q.id];
+      if(ci===q.correctIdx) el.classList.add('correct');
+      else if(a&&ci===a.chosen&&ci!==q.correctIdx) el.classList.add('wrong');
+    });
+  });
+  clearInterval(timerInt);
+  const elapsed=Math.floor((Date.now()-startTs)/1000);
+  let rc=0,rt=0,mc=0,mt=0,cc=0,ct=0;
+  qs.forEach(q=>{
+    const a=ans[q.id],ok=a&&a.chosen===q.correctIdx;
+    if(q.section==='rhythm'){rt++;if(ok)rc++;}
+    else if(q.section==='melody'){mt++;if(ok)mc++;}
+    else if(q.section==='chord'){ct++;if(ok)cc++;}
+  });
+  const total=qs.length,correct=rc+mc+cc;
+  const score=Math.round((correct/total)*100);
+  const rs=rt?Math.round((rc/rt)*100):null,ms=mt?Math.round((mc/mt)*100):null,cs=ct?Math.round((cc/ct)*100):null;
+  try{
+    await window._update(window._ref(window._db,'rooms/'+rcode+'/students/'+info.seatNo),
+      {status:'done',finishedAt:Date.now(),totalScore:score,rhythmScore:rs,melodyScore:ms,chordScore:cs,elapsed});
+  }catch(e){console.error(e);}
+  setTimeout(()=>{
+    document.getElementById('quiz').style.display='none';
+    document.getElementById('scorescreen').style.display='flex';
+    const stars=score>=90?'⭐⭐⭐':score>=70?'⭐⭐':score>=50?'⭐':'💪';
+    const msg=score>=90?'🎉 完美！聽覺天才！':score>=70?'👍 表現不錯，繼續加油！':score>=50?'📚 還有進步空間，多練耳！':'💪 不要灰心，再接再厲！';
+    document.getElementById('scstars').textContent=stars;
+    document.getElementById('scname').textContent=info.seatNo+'號 '+info.name;
+    document.getElementById('sctotal').textContent=score;
+    document.getElementById('sc-r').textContent=rs!=null?rs+'%':'—';
+    document.getElementById('sc-m').textContent=ms!=null?ms+'%':'—';
+    document.getElementById('sc-c').textContent=cs!=null?cs+'%':'—';
+    document.getElementById('sctime').textContent='用時 '+fmt(elapsed);
+    document.getElementById('scmsg').textContent=msg;
+  },700);
+  document.getElementById('subbtn').style.display='none';
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login').style.display!=='none')join();});
+</script>
+</body>
+</html>
